@@ -1,0 +1,52 @@
+{
+  "name": "dsh-bili-whale-safever-by-jediliu",
+  "version": "0.4.6-safever.1",
+  "description": "养鱼插件（safever 版，by jediliu）：在 dsh-bili-whale 基础上加了入场校验与配置页；本包不含任何使用者配置与登录凭据。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "bilibili",
+    "agent",
+    "diary"
+  ],
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "tools",
+    "cordis.patch.yml",
+    "README.md",
+    "tests",
+    "AUDIT-FIXES.md",
+    "RISK-PROTECTION.md",
+    "AI-SHARE-TRIAL.md",
+    "LOCAL-UPDATE.md",
+    "ISSUE27-FIX.md",
+    "LISTENER-FIX.md",
+    "DM-HISTORY-FIX.md",
+    "BUGFIX-2026-10-25.md",
+    "QR-LOGIN-2026-10-25.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
+  "license": "MIT",
+  "dependencies": {
+    "qrcode": "1.5.4"
+  }
+}
