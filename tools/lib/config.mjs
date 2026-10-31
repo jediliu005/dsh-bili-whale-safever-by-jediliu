@@ -1,4 +1,4 @@
-// 统一配置层 —— 一个文件承载所有"属于使用者"的东西。
+﻿// 统一配置层 —— 一个文件承载所有"属于使用者"的东西。
 //
 // 为什么要有它（2026-10-14 外部评审指出的最大架构缺口）：
 //   在此之前，"个人化的东西"散在四处、形态还不一样 ——
@@ -34,6 +34,7 @@ export const DEFAULTS = {
     diaryTitle: '今日摘要', // diary show 的标题（想用自己的口吻就改这里）
   },
   preferences: {
+    maxAgeDays: 30,   // 只看近 N 天发布的（0 = 不限制）—— 2026-10-31 主人定
     like: ['AI 工具与插件', '鬼畜与怀旧向剪辑', '猫咪', 'Live2D/模型'],
     dislike: ['带货', '擦边', '标题党', '纯搬运'],
   },
@@ -75,3 +76,4 @@ export function config() {
   cache.__hasUserFile = Object.keys(user).length > 0
   return cache
 }
+

@@ -122,7 +122,7 @@ for (const [kwIndex, kw] of searchKeywords.entries()) {
       for (const it of (j?.data?.result ?? []).slice(0, Math.ceil(POOL / Math.max(1, searchKeywords.length)) + 4)) {
         pool.push({
           bv: it.bvid, t: String(it.title).replace(/<[^>]+>/g, ''), d: secs(it.duration),
-          dm: Number(it.danmaku ?? 0), play: Number(it.play ?? 0), up: it.author, kw,
+          dm: Number(it.danmaku ?? 0), play: Number(it.play ?? 0), up: it.author, kw, pub: Number(it.pubdate ?? 0),
         })
       }
     } catch { /* 这个词没结果就跳过 */ }
@@ -138,14 +138,14 @@ async function fetchPopular() {
   const j = await (await fetch('https://api.bilibili.com/x/web-interface/popular?pn=1&ps=20', { headers: H })).json()
   for (const it of (j?.data?.list ?? [])) {
     pool.push({ bv: it.bvid, t: String(it.title ?? '').replace(/<[^>]+>/g, ''), d: Number(it.duration ?? 0),
-      dm: Number(it.stat?.danmaku ?? 0), play: Number(it.stat?.view ?? 0), up: it.owner?.name ?? '', kw: '热门' })
+      dm: Number(it.stat?.danmaku ?? 0), play: Number(it.stat?.view ?? 0), up: it.owner?.name ?? '', kw: '热门', pub: Number(it.pubdate ?? 0) })
   }
 }
 async function fetchRank() {
   const j = await (await fetch('https://api.bilibili.com/x/web-interface/ranking/v2?rid=0&type=all', { headers: H })).json()
   for (const it of (j?.data?.list ?? []).slice(0, 20)) {
     pool.push({ bv: it.bvid, t: String(it.title ?? '').replace(/<[^>]+>/g, ''), d: Number(it.duration ?? 0),
-      dm: Number(it.stat?.danmaku ?? 0), play: Number(it.stat?.view ?? 0), up: it.owner?.name ?? '', kw: '排行' })
+      dm: Number(it.stat?.danmaku ?? 0), play: Number(it.stat?.view ?? 0), up: it.owner?.name ?? '', kw: '排行', pub: Number(it.pubdate ?? 0) })
   }
 }
 // 关注的人发了什么（2026-10-18 加）：真人才会"刷关注"——只搜关键词等于只刷"搜索"，不像人
@@ -160,7 +160,7 @@ async function fetchFollowing() {
     const p = dt.split(':').map(Number)
     const secs = p.length === 2 ? p[0] * 60 + p[1] : p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : 0
     pool.push({ bv: ar.bvid, t: String(ar.title ?? '').replace(/<[^>]+>/g, ''), d: secs,
-      dm: 0, play: Number(ar.stat?.play ?? 0), up: a?.name ?? '', kw: '关注' })
+      dm: 0, play: Number(ar.stat?.play ?? 0), up: a?.name ?? '', kw: '关注', pub: Number(ar.pubdate ?? a?.pub_ts ?? 0) })
   }
 }
 try { if (SOURCE_HOT === 'popular' || SOURCE_HOT === 'all') await fetchPopular() } catch { console.error('（热门源取不到，跳过）') }
@@ -258,13 +258,32 @@ const selfName = String(config().self?.name ?? "")
 // 2026-10-22 加（主人问「feed 是不是筛得太严」）：不是严 ✗ 是【没有质量下限】✗
 //   实测：候选池 66 条 → 只出 3 条，其中 2 条是 0/1 播放的碎屑 ✓
 //   注意：这不是给播放量加权 ✗（那条是主人 10-20 明确否掉的）
-//   只是丢掉「几乎无人看过」的：播放<300 且 弹幕<3，且不是多偏好命中 ✓
+// 2026-10-31 主人定：「垃圾都不看」——取消 10-22 那条「多偏好命中就留碎屑」的后门 ✗
+//   加了 30 天窗口以后，池子里剩下的碎屑比例明显上升（代肝广告、0 播放的直播回放）✓
+//   现在分三类直接丢：①几乎无人看过 ②接单/代肝类广告 ③超长直播回放
 const looksLikeJunk = (x) => x.play < 300 && x.dm < 3
-const uniq = [...new Map(pool.map((x) => [x.bv, x])).values()]
+const AD_WORDS = /(代肝|代练|接单|托管|私单|刷单|挂机|收号|出号|租号|工作室)/i
+const looksLikeAd = (x) => AD_WORDS.test(String(x.t ?? ''))
+const looksLikeVod = (x) => Number(x.d) > 7200 * 1.5   // 3 小时以上，基本是直播回放/合集搬运
+// 2026-10-31 主人定：只看近 30 天发布的，更早的没有看的价值。
+//   0 = 不限制；pub 未知（0）的条目保留——宁可多看一条，也不因为拿不到日期而漏掉。
+//   窗口在「候选池 → 去重 → 排序」之前就切，避免老片占掉深读名额。
+const MAX_AGE_DAYS = (() => {
+  const v = Number(config().preferences?.maxAgeDays ?? 30)
+  return Number.isFinite(v) && v > 0 ? v : 0
+})()
+const ageCutoff = MAX_AGE_DAYS ? Math.floor(Date.now() / 1000) - MAX_AGE_DAYS * 86400 : 0
+const tooOld = (x) => MAX_AGE_DAYS > 0 && Number(x.pub) > 0 && Number(x.pub) < ageCutoff
+const droppedByAge = pool.filter(tooOld).length
+const afterAge = [...new Map(pool.map((x) => [x.bv, x])).values()].filter((x) => !tooOld(x))
+// 2026-10-31「垃圾都不看」：碎屑 / 广告 / 直播回放 一律丢，不再给「多偏好命中」开后门
+const droppedAsJunk = afterAge.filter((x) => looksLikeJunk(x) || looksLikeAd(x) || looksLikeVod(x)).length
+const uniq = afterAge
   .filter((x) => !seen.has(x.bv) && !likedBVs.has(x.bv) && !favBVs.has(x.bv))
   .filter((x) => !(selfName && String(x.up ?? "").includes(selfName)))
-  // 2026-10-22：碎屑丢掉落（多偏好命中 ≥2 的留着 ✓ 那可能真是小众宝藏）
-  .filter((x) => !looksLikeJunk(x) || hitsOf(x.t).length >= 2)
+  .filter((x) => !looksLikeJunk(x))
+  .filter((x) => !looksLikeAd(x))
+  .filter((x) => !looksLikeVod(x))
 const scoreOf = (x) => densityOf(x) * 3 + hitsOf(x.t).length * 4 + boostOf(x.t)
 uniq.sort((a, b) => scoreOf(b) - scoreOf(a))
 for (const x of uniq) { x._hits = hitsOf(x.t); x._score = scoreOf(x) }
@@ -286,7 +305,7 @@ for (const x of uniq) {
 console.log(`偏好（来自日记）: ${prefs.join(' · ')}`)
 console.log(`反馈回流: 被赞 ${likedEvents.length} 条 · 她收藏 ${favItems.length} 条 → 学会 ${learnedTokens.length} 个主题词`)
 console.log(`已看过/已评论过（已排除）: ${seen.size} 个 BV`)
-console.log(`候选池: ${pool.length} 条 → 去重去已看后 ${uniq.length} 条\n`)
+console.log(`候选池: ${pool.length} 条 → 去重去已看后 ${uniq.length} 条` + (MAX_AGE_DAYS ? `（按近 ${MAX_AGE_DAYS} 天发布过滤掉 ${droppedByAge} 条)` : '（未限制发布时间）') + `（碎屑/广告/回放过滤掉 ${droppedAsJunk} 条）` + '\n')
 console.log(`今天可以看这几条（每词最多 ${PER} 条，共 ${N} 条）：`)
 const perKw = {}
 let shown = 0
@@ -298,3 +317,4 @@ for (const x of diversified) {
   console.log(`  ${String(shown).padStart(2)}. ${x.bv}  ${String(x.d).padStart(4)}s  弹幕${String(x.dm).padStart(7)}  播放${String(x.play).padStart(9)}  ${x.t.slice(0, 40)}  @${x.up} ${x._hits.length ? "[" + x._hits.join("+") + "]" : ""}`)
 }
 console.log('\n看完跑：node bili.mjs debrief <BV>   → 然后把"想法"写进日记的「想说」区（不发）')
+
