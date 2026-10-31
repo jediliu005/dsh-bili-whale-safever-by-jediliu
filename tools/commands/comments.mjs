@@ -1,4 +1,4 @@
-import { cacheComments } from '../lib/ai-share.mjs'
+﻿import { cacheComments } from '../lib/ai-share.mjs'
 import { apiGet } from '../lib/bili-api.mjs'
 // 拉一条视频的热评 / 最新评论（只读）——「看完的人怎么看」那一路，从 debrief 里拆出来单用。
 //
@@ -17,6 +17,8 @@ import { apiGet } from '../lib/bili-api.mjs'
 //      写操作（发/删评论）另见 comment.mjs，那是另一套（WBI + bili_jct）。
 import fs from 'node:fs'
 import path from 'node:path'
+import { installOutputGuard } from '../lib/output-guard.mjs'
+installOutputGuard()
 
 const argv = process.argv.slice(2)
 const bvid = argv.find((a) => !a.startsWith('--'))

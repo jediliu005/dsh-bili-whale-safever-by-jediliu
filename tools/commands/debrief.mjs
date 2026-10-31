@@ -1,4 +1,4 @@
-import { guardedFetch as fetch } from '../lib/traffic.mjs'
+﻿import { guardedFetch as fetch } from '../lib/traffic.mjs'
 import { apiGet } from '../lib/bili-api.mjs'
 // 「看懂视频」一条龙：封面 + 简介 + 官方字幕 + 弹幕热区 + 热评 + 画面抽帧，六路齐出。
 //
@@ -22,6 +22,8 @@ import { fileURLToPath } from 'node:url'
 import { config } from '../lib/config.mjs'
 import { dshPath } from '../lib/paths.mjs'
 import { NODE_EXE } from '../lib/nodebin.mjs'   // 2026-10-21：别用 process.execPath（Electron 里它是主程序 ✗）
+import { installOutputGuard } from '../lib/output-guard.mjs'
+installOutputGuard()
 
 
 const argv = process.argv.slice(2)

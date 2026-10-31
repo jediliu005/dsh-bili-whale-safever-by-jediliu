@@ -1,4 +1,4 @@
-import { guardedFetch as fetch } from '../lib/traffic.mjs'
+﻿import { guardedFetch as fetch } from '../lib/traffic.mjs'
 // 选题器：照"她自己的偏好"挑今天该看什么。**只读**，不产生任何对外动作。
 //
 // 用法: node feed.mjs [--n 6] [--per 2] [--pool 30]
@@ -12,6 +12,8 @@ import path from 'node:path'
 import { config } from '../lib/config.mjs'
 import crypto from 'node:crypto'
 import { dshPath } from '../lib/paths.mjs'
+import { installOutputGuard } from '../lib/output-guard.mjs'
+installOutputGuard()
 
 
 const argv = process.argv.slice(2)

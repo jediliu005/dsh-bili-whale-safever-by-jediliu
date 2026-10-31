@@ -1,8 +1,10 @@
-import { guardedFetch as fetch } from '../lib/traffic.mjs'
+﻿import { guardedFetch as fetch } from '../lib/traffic.mjs'
 // 搜索 B 站视频（WBI 签名 + cookie）。用法: node search.mjs <关键词> [页码]
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { installOutputGuard } from '../lib/output-guard.mjs'
+installOutputGuard()
 
 const kw = process.argv[2]
 const page = Number(process.argv[3] ?? 1)

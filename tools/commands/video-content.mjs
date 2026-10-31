@@ -1,10 +1,12 @@
-import { guardedFetch as fetch } from '../lib/traffic.mjs'
+﻿import { guardedFetch as fetch } from '../lib/traffic.mjs'
 import { apiGet } from '../lib/bili-api.mjs'
 // Reconstruct what a video is about without watching it.
 //   metadata + cover + subtitles (if any) + tags + the repo it links to
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { installOutputGuard } from '../lib/output-guard.mjs'
+installOutputGuard()
 
 const BVID = process.argv[2]
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
