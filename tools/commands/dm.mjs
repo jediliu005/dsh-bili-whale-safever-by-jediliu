@@ -206,19 +206,30 @@ if (ONE_TARGET_PER_DAY && q.date === today() && q.mid && String(q.mid) !== ONLY_
   process.exit(4)
 }
 
-console.log(`[dm] ${meInfo.uname} → ${OWNER_NAME}（mid ${ONLY_TO}）`)
+// 2026-10-31 修：以前这几行打在**发送之前**，遇到闸门拒绝（如写预算用尽）时会留下
+//   「[dm] → 主人 … 正文 73 字」的假象，看起来像已发送 ✗ 现在改成「准备发送」，
+//   失败时明确打「未发送」，并且不再往外抛栈。
+console.log(`[dm] 准备发送：${meInfo.uname} → ${OWNER_NAME}（mid ${ONLY_TO}）`)
 console.log(`  正文 ${MSG.length} 字：${MSG.slice(0, 80)}${MSG.length > 80 ? '…' : ''}`)
-console.log(`  互关 ✓  ·  今天第 ${used + 1} 条（条数不限 ✓ 锁定给 ${OWNER_NAME} ✓）`)
+console.log(`  互关 ✓  ·  成功后将记为今天第 ${used + 1} 条（条数不限 ✓ 锁定给 ${OWNER_NAME} ✓）`)
 
 if (!GO && !DRY) { console.error('✗ 必须给 --dry 或 --go'); process.exit(2) }
 
 // ④ 分享型先过闸（日上限 / 同一视频 7 天一次 / 评分卡 …由 quota 统一管 ✓）
 if (SHARE) {
   const ok = gate({ type: 'dm', target: SHARE_TARGET, auto: true, share: true })
-  if (!ok) { console.error('✗ 分享额度不允许（见上面的 [限额闸] 输出）'); process.exit(4) }
+  if (!ok) { console.error('  ✗ 未发送：分享额度不允许（见上面的 [限额闸] 输出）'); process.exit(4) }
 }
 if (DRY) { console.log('  [dry] 预检通过，未发送 ✓ 正式发送时会重新检查额度'); process.exit(0) }
-const r = await send(ONLY_TO, MSG)
+let r
+try {
+  r = await send(ONLY_TO, MSG)
+} catch (e) {
+  // 本地闸门（写预算 / 冷却 / 去重）在这里抛出，不是网络错误
+  const code = e?.code ? `（${e.code}）` : ''
+  console.error(`  ✗ 未发送：${e?.message ?? e}${code}`)
+  process.exit(1)
+}
 if (r.code === 0) {
   saveQ({ date: today(), count: used + 1, mid: ONLY_TO, at: new Date().toISOString() })
   if (SHARE) record({ type: 'dm', target: SHARE_TARGET, note: MSG.slice(0, 40), auto: true, share: true })
