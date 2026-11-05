@@ -1,4 +1,4 @@
-﻿import { guardedFetch as fetch } from '../lib/traffic.mjs'
+import { guardedFetch as fetch } from '../lib/traffic.mjs'
 // 选题器：照"她自己的偏好"挑今天该看什么。**只读**，不产生任何对外动作。
 //
 // 用法: node feed.mjs [--n 6] [--per 2] [--pool 30]
@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { config } from '../lib/config.mjs'
 import crypto from 'node:crypto'
-import { dshPath } from '../lib/paths.mjs'
+import { dshPath, diaryPath } from '../lib/paths.mjs'
 import { installOutputGuard } from '../lib/output-guard.mjs'
 installOutputGuard()
 
@@ -30,7 +30,7 @@ const PER = Number(opt.per ?? 2)
 const POOL = Number(opt.pool ?? 60)
 
 const HOME = (process.env.USERPROFILE || process.env.HOME || '/')
-const diary = dshPath('whale-diary.md')
+const diary = diaryPath('whale-diary.md')
 // 2026-10-18：审计表挪到 `~/.bili-ai/` ✓（原来写死作者机器路径 ✗ 换机器就写不进去，静默失效 ✗）
 const audit = path.join(HOME, '.bili-ai', 'commented-videos.md')
 
@@ -263,7 +263,18 @@ const selfName = String(config().self?.name ?? "")
 // 2026-10-31 主人定：「垃圾都不看」——取消 10-22 那条「多偏好命中就留碎屑」的后门 ✗
 //   加了 30 天窗口以后，池子里剩下的碎屑比例明显上升（代肝广告、0 播放的直播回放）✓
 //   现在分三类直接丢：①几乎无人看过 ②接单/代肝类广告 ③超长直播回放
-const looksLikeJunk = (x) => x.play < 300 && x.dm < 3
+const looksLikeJunk = (x) => {
+  const play = Number(x.play ?? 0)
+  const dm = Number(x.dm ?? 0)
+  const dur = Number(x.d ?? 0)
+  // 原规则：几乎无人看过（播放 <300 且弹幕 <3）
+  if (play < 300 && dm < 3) return true
+  // 2026-11-03 收紧：40 秒以内、播放不到 1000、又没有弹幕的短片，
+  // 就是「短碎屑」——两次漏网的都是这一类（22 秒/347 播放、32 秒/425 播放）。
+  // 只加这一条：长片、有弹幕的、播放破千的一律不动。
+  if (dur > 0 && dur <= 40 && play < 1000 && dm < 3) return true
+  return false
+}
 const AD_WORDS = /(代肝|代练|接单|托管|私单|刷单|挂机|收号|出号|租号|工作室)/i
 const looksLikeAd = (x) => AD_WORDS.test(String(x.t ?? ''))
 const looksLikeVod = (x) => Number(x.d) > 7200 * 1.5   // 3 小时以上，基本是直播回放/合集搬运

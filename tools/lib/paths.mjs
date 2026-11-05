@@ -35,3 +35,9 @@ export const configPath = process.env.BILI_WHALE_CONFIG || dshPath('bili-whale.c
 
 /** Credentials are per OS user, independent of DSH_HOME. */
 export const credentialsPath = homePath('.bili-ai', 'credentials.json')
+
+/** 日记目录：从 2026-11-05 起统一放在 <redacted>\daily（可用 BILI_WHALE_DIARY_DIR 覆盖）。 */
+export const DIARY_HOME = process.env.BILI_WHALE_DIARY_DIR || '<redacted>\\daily'
+
+/** 拼一个位于日记目录下的路径（whale-diary.md / whale-diary-private.md 等）。 */
+export const diaryPath = (...parts) => path.join(DIARY_HOME, ...parts)
