@@ -8,6 +8,7 @@
 // 这个命令把"该确认的事"列成一张表，缺哪项就直说缺哪项。
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import { execFileSync } from '../lib/capture.mjs'
 import { fileURLToPath } from 'node:url'
 import { dshPath } from '../lib/paths.mjs'
@@ -73,7 +74,7 @@ try {
 for (const [label, p] of [['.bili-ai', path.join(HOME, '.bili-ai')], ['DSH_HOME', DSH]]) {
   line(fs.existsSync(p) ? OK : NO, '目录 ' + label, p)
 }
-const DIARY = path.join(process.env.BILI_WHALE_DIARY_DIR || '<redacted>\\\\daily', 'whale-diary.md')
+const DIARY = path.join(process.env.BILI_WHALE_DIARY_DIR || path.join(os.homedir(), 'botshare', 'daily'), 'whale-diary.md')
 line(fs.existsSync(DIARY) ? OK : WARN, '日记', fs.existsSync(DIARY) ? '已存在' : '还没建（她第一次醒来会写）')
 
 // ⑤ 依赖体检（直接调现成的 deps，别在这里重复实现 ✗）
