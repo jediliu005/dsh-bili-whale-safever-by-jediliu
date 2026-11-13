@@ -28,7 +28,7 @@
 
 - 上游：[Alterssss/dsh-bili-whale](https://github.com/Alterssss/dsh-bili-whale)，版本 **0.4.6**
 - 本仓库是它的 **MIT 分叉**，保留 `LICENSE` 与全部原版文件；改动范围就是上面那张表
-- 版本号：`0.4.6-safever.1`
+- 版本号：`0.4.8`
 
 ## 安装
 
@@ -326,6 +326,7 @@ node bili.mjs dm --msg "…" --go           # 真发
 ## ffmpeg（可选 · 只有"抽帧看画面"这一路要它）
 
 **不装也能跑** ✓ —— 只是少一路"看画面"：字幕 / 弹幕 / 热评 / 封面 / 简介 照常 ✓
+npm 安装时会通过 `optionalDependencies` 自动带 `@ffmpeg-installer/ffmpeg`；如果安装时用了 `--omit=optional`，重新执行普通 `npm install` 即可。
 
 ### Windows（最常见）
 
@@ -352,9 +353,10 @@ sudo apt install ffmpeg    # Debian / Ubuntu
 查找顺序（第一个找到就用）：
 
 1. 环境变量 `FFMPEG`（指向绝对路径，比如 `D:\tools\ffmpeg.exe`）
-2. `PATH` 里的 `ffmpeg`
-3. `<插件目录>/bin/ffmpeg.exe` 或 `~/.dsh/bili-whale/bin/`
-4. 装了**剪映**的话，它自带的 ffmpeg 也能用 ✓（兜底，不保证版本）
+2. npm 可选依赖 `@ffmpeg-installer/ffmpeg`
+3. `PATH` 里的 `ffmpeg`
+4. `<插件目录>/bin/ffmpeg.exe` 或 `~/.dsh/bili-whale/bin/`
+5. 装了**剪映**的话，它自带的 ffmpeg 也能用 ✓（兜底，不保证版本）
 
 许可证见 [`NOTICE.md`](NOTICE.md)（**LGPL，不随包分发**；自己放进 `bin/` 的请附其 LICENSE 与源码链接）。
 

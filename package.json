@@ -1,7 +1,7 @@
 {
   "name": "dsh-bili-whale-safever-by-jediliu",
-  "version": "0.4.6-safever.1",
-  "description": "养鱼插件（safever 版，by jediliu）：在 dsh-bili-whale 基础上加了入场校验与配置页；本包不含任何使用者配置与登录凭据。",
+  "version": "0.4.8",
+  "description": "B 站养鱼：自动投喂、养鱼日记、互动与配置页；不包含任何账号凭据。",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -48,5 +48,12 @@
   "license": "MIT",
   "dependencies": {
     "qrcode": "1.5.4"
+  },
+  "optionalDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.0-rc.2"
   }
 }

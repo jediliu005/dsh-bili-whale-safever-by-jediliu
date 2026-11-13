@@ -13,6 +13,7 @@
 // 用 @ffmpegPath() 取路径（可能 null）；@requireFfmpeg() 取路径并在缺时抛友好错误。
 import fs from 'node:fs'
 import path from 'node:path'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from './capture.mjs'
 import { dshPath } from './paths.mjs'
@@ -22,10 +23,20 @@ const EXE = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..')
 const HOME = process.env.USERPROFILE || process.env.HOME || '.'
+const requireFromPlugin = createRequire(import.meta.url)
 
 const exists = (f) => {
   if (!f) return false
   try { return fs.statSync(f).isFile() } catch { return false }
+}
+
+// npm 安装时由 optionalDependencies 自动带入；未安装/被 --omit=optional 时返回 null。
+function installerFfmpeg() {
+  try {
+    const mod = requireFromPlugin('@ffmpeg-installer/ffmpeg')
+    const p = typeof mod === 'string' ? mod : mod && mod.path
+    return exists(p) ? p : null
+  } catch { return null }
 }
 
 function onPath() {
@@ -51,6 +62,7 @@ function jianyingCopies() {
 export function ffmpegPath() {
   const cands = [
     process.env.FFMPEG,
+    installerFfmpeg(),
     onPath(),
     path.join(ROOT, 'bin', EXE),
     dshPath('bili-whale', 'bin', EXE),
@@ -64,9 +76,10 @@ export function requireFfmpeg() {
   if (p) return p
   throw new Error([
     '找不到 ffmpeg（抽帧/看画面需要它）。任选一种解决：',
-    '  ① 装一个：winget install ffmpeg   （或 scoop install ffmpeg / brew install ffmpeg）',
-    '  ② 用环境变量指定：set FFMPEG=D:\\path\\to\\ffmpeg.exe',
-    `  ③ 把它放到 ${path.join(ROOT, 'bin', EXE)} 或 ${dshPath('bili-whale', 'bin', EXE)}`,
+    '  ① 重装插件并保留 optionalDependencies（会自动带 @ffmpeg-installer/ffmpeg）',
+    '  ② 装一个：winget install ffmpeg   （或 scoop install ffmpeg / brew install ffmpeg）',
+    '  ③ 用环境变量指定：set FFMPEG=D:\\path\\to\\ffmpeg.exe',
+    `  ④ 把它放到 ${path.join(ROOT, 'bin', EXE)} 或 ${dshPath('bili-whale', 'bin', EXE)}`,
   ].join('\n'))
 }
 
