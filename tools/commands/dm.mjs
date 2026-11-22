@@ -1,4 +1,5 @@
 import { guardedFetch as fetch } from '../lib/traffic.mjs'
+import { guardOutbound } from '../lib/outbound-guard.mjs'
 // 私信（专属通道）—— 2026-10-18 主人定：**三条写死在代码里**
 //   ① **一天只锁定 1 个收信人**（防刷量；对同一个人发多少条不限 ✓）
 //   ② 只发给配置里的 owner.mid（同一个用户，别处发不出去）
@@ -57,7 +58,7 @@ const BV = (String(opt.msg ?? "").match(/BV[0-9A-Za-z]{10}/) ?? [])[0] ?? "";
 const DRY = !!opt.dry
 const GO = !!opt.go
 const STATUS = !!opt.status
-const MSG = String(opt.msg ?? '').trim()
+let MSG = String(opt.msg ?? '').trim()
 if (SHARE && !STATUS) {
   try { validateShare(config(), opt) } catch (e) { console.error(e.message); process.exit(2) }
 }
@@ -180,6 +181,8 @@ if (!MSG) { console.error('用法: node dm.mjs --msg "…" [--share --target BV�
 // ── 闸门（写死，不接受参数覆盖）──────────────────────────────────────
 if (!OWNER) { console.error('✗ 配置里 owner.mid 为空 —— 私信只发给主人，没配就不发'); process.exit(2) }
 if (MSG.length > 300) { console.error(`✗ 私信太长（${MSG.length} > 300 字），退化成刷屏了 ✗`); process.exit(2) }
+// 出站机密闸（2026-11-17 主人要求）：路径 / token / 密钥一律拦下
+MSG = guardOutbound(MSG, { allow: process.argv.slice(2).includes('--allow-secretish'), label: '私信正文' })
 
 const meInfo = await me()
 if (String(meInfo.mid) === ONLY_TO) {

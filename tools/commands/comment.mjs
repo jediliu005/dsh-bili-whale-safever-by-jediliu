@@ -2,6 +2,7 @@ import {checkCommentTarget} from '../lib/comment-target.mjs'
 import {exactJson} from '../lib/json-exact.mjs'
 import { decision, notifyOnce } from '../lib/ai-share.mjs'
 import { guardedFetch as fetch } from '../lib/traffic.mjs'
+import { guardOutbound } from '../lib/outbound-guard.mjs'
 // Post ONE bilibili comment on the user's behalf. Explicitly single-shot.
 //
 //   node bili-comment.mjs --oid <aid> --bvid <BV...> --message "@昵称 正文" --dry
@@ -135,6 +136,8 @@ if (!oid || (!bvid && !refererArg) || !message) {
 }
 if (dry && go) { console.error('pick either --dry or --go, not both'); process.exit(2) }
 if (!dry && !go) { console.error('refusing to run without an explicit --dry or --go'); process.exit(2) }
+// 出站机密闸（2026-11-17）：评论也是发出去的字，路径 / token / 密钥一律拦下
+message = guardOutbound(message, { allow: process.argv.slice(2).includes('--allow-secretish'), label: '评论正文' })
 
 // --share（分享型）：正文里必须 @ 主人 —— 没写 @ 就自动补上。
 // 昵称取配置的 owner.name（space/wbi/acc/info 可能被风控，不实时查）；

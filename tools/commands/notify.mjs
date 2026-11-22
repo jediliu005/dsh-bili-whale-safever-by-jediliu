@@ -23,6 +23,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { config } from '../lib/config.mjs'
 import { NODE_EXE } from '../lib/nodebin.mjs'   // 2026-10-21：别用 process.execPath（Electron 里它是主程序 ✗）
+import { guardOutbound } from '../lib/outbound-guard.mjs'
 
 const argv = process.argv.slice(2)
 const DRY = argv.includes('--dry')
@@ -43,6 +44,8 @@ if (TEST) {
   text = argv.find((a, i) => !skip.has(i) && !a.startsWith('--'))
 }
 if (!text) { console.error('用法: node notify.mjs "消息正文" [--title 标题] | --test'); process.exit(2) }
+// 出站机密闸（2026-11-17）：notify 只收纯文本，传文件路径会把路径当正文发出去——这里直接拦
+text = guardOutbound(text, { allow: argv.includes('--allow-secretish'), label: '通知正文' })
 
 const n = config().notify ?? { type: 'none' }
 const type = String(n.type ?? 'none')
