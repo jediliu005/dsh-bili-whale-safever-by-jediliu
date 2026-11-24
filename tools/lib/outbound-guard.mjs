@@ -29,12 +29,19 @@ const RULES = [
   { id: 'cred-url', re: /[a-z][a-z0-9+.-]*:\/\/[^\s/@]+:[^\s/@]+@/i, why: '带用户名密码的链接' },
 ]
 
+// 打码：留前 8 与后 4，中间省略，另附总长度。日志里永不出现完整凭据。
+function maskHit(sample) {
+  const s = String(sample ?? '')
+  if (s.length <= 14) return `${s.slice(0, 3)}…（共 ${s.length} 字符）`
+  return `${s.slice(0, 8)}…${s.slice(-4)}（共 ${s.length} 字符）`
+}
+
 export function scanOutbound(text) {
   const s = String(text ?? '')
   const hits = []
   for (const rule of RULES) {
     const m = s.match(rule.re)
-    if (m) hits.push({ id: rule.id, why: rule.why, sample: String(m[0]).slice(0, 40) })
+    if (m) hits.push({ id: rule.id, why: rule.why, sample: String(m[0]), masked: maskHit(String(m[0])) })
   }
   return hits
 }
@@ -46,20 +53,33 @@ export function checkOutbound(text) {
 }
 
 // 发送前调用：返回可发送的正文（口令已抹除）。
-// 命中机密且无口令授权 → 打印原因并 exit(3)。--allow-secretish 只能由人手动放行。
+// 命中机密且无口令授权 → 打印三段式说明并 exit(3)。--allow-secretish 只能由人手动放行。
 export function guardOutbound(text, { allow = false, label = '出站正文' } = {}) {
   const original = String(text ?? '')
-  if (allow) return original
+  const hits0 = scanOutbound(original)
+  if (allow) {
+    const ids = hits0.map((h) => h.id).join(',') || 'none'
+    console.log(`  ✓ 人工放行（--allow-secretish）· 命中规则：${ids} · ${new Date().toISOString()} · 仅本次 · 责任：加参数的人`)
+    return original
+  }
   const v = verifyToken(original, guardConfig(config()))
   const body = v.authorized ? scrubToken(original, v.token) : original
   if (v.authorized) {
-    console.log('  ✓ 口令命中：视为主人授权，口令已抹除后放行（不再按机密规则拦）')
+    const rest = scanOutbound(body).map((h) => h.id)
+    console.log(`  ✓ 口令授权 · 规则：${rest.join(',') || 'none'} · ${new Date().toISOString()} · 口令已抹除后放行 · 责任：口令授权人`)
     return body
   }
   const r = checkOutbound(body)
   if (r.ok) return body
-  console.error(`✗ ${label}里发现疑似机密，已拦下未发送：`)
-  for (const h of r.hits) console.error(`   · ${h.why}：${h.sample}`)
-  console.error('  说明：出站机密闸（lib/outbound-guard.mjs）。两条放行方式：正文开头带授权口令，或人工加 --allow-secretish。')
+  console.error(`✗ ${label}命中出站机密规则，已拦下未发送。`)
+  console.error('  ① 命中类别：')
+  for (const h of r.hits) console.error(`     · ${h.why}（规则 ${h.id}）`)
+  console.error('  ② 命中片段（已打码）：')
+  for (const h of r.hits) console.error(`     · ${h.masked}`)
+  console.error('  ③ 下一步动作（三选一）：')
+  console.error('     · 改内容：删掉这段，或改写成不含凭据/路径的说法，重跑一次')
+  console.error('     · 走豁免：由主人授权，正文开头带口令 → 口令会被抹除后放行')
+  console.error('     · 停手找人：人工加 --allow-secretish → 仅本次有效，日志会记时间与操作者')
+  console.error('     可逆性：本闸只拦不发，不改任何文件；放行动作不做删除，撤回只需重新发送。')
   process.exit(3)
 }
