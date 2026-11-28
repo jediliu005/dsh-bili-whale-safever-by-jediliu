@@ -289,9 +289,17 @@ const ageCutoff = MAX_AGE_DAYS ? Math.floor(Date.now() / 1000) - MAX_AGE_DAYS * 
 const tooOld = (x) => MAX_AGE_DAYS > 0 && Number(x.pub) > 0 && Number(x.pub) < ageCutoff
 const droppedByAge = pool.filter(tooOld).length
 const afterAge = [...new Map(pool.map((x) => [x.bv, x])).values()].filter((x) => !tooOld(x))
+// 2026-11-28 主人定：最短看片时间 —— 短于它的视频不进候选（0 = 不限制）
+const MIN_SECONDS = (() => {
+  const v = Number(config().preferences?.minSeconds ?? 20)
+  return Number.isFinite(v) && v > 0 ? v : 0
+})()
+const tooShort = (x) => MIN_SECONDS > 0 && Number(x.d) > 0 && Number(x.d) < MIN_SECONDS
+const droppedByShort = afterAge.filter(tooShort).length
+const afterShort = afterAge.filter((x) => !tooShort(x))
 // 2026-10-31「垃圾都不看」：碎屑 / 广告 / 直播回放 一律丢，不再给「多偏好命中」开后门
-const droppedAsJunk = afterAge.filter((x) => looksLikeJunk(x) || looksLikeAd(x) || looksLikeVod(x)).length
-const uniq = afterAge
+const droppedAsJunk = afterShort.filter((x) => looksLikeJunk(x) || looksLikeAd(x) || looksLikeVod(x)).length
+const uniq = afterShort
   .filter((x) => !seen.has(x.bv) && !likedBVs.has(x.bv) && !favBVs.has(x.bv))
   .filter((x) => !(selfName && String(x.up ?? "").includes(selfName)))
   .filter((x) => !looksLikeJunk(x))
@@ -318,7 +326,7 @@ for (const x of uniq) {
 console.log(`偏好（来自日记）: ${prefs.join(' · ')}`)
 console.log(`反馈回流: 被赞 ${likedEvents.length} 条 · 她收藏 ${favItems.length} 条 → 学会 ${learnedTokens.length} 个主题词`)
 console.log(`已看过/已评论过（已排除）: ${seen.size} 个 BV`)
-console.log(`候选池: ${pool.length} 条 → 去重去已看后 ${uniq.length} 条` + (MAX_AGE_DAYS ? `（按近 ${MAX_AGE_DAYS} 天发布过滤掉 ${droppedByAge} 条)` : '（未限制发布时间）') + `（碎屑/广告/回放过滤掉 ${droppedAsJunk} 条）` + '\n')
+console.log(`候选池: ${pool.length} 条 → 去重去已看后 ${uniq.length} 条` + (MAX_AGE_DAYS ? `（按近 ${MAX_AGE_DAYS} 天发布过滤掉 ${droppedByAge} 条)` : '（未限制发布时间）') + (MIN_SECONDS ? `（短于 ${MIN_SECONDS} 秒过滤掉 ${droppedByShort} 条)` : '') + `（碎屑/广告/回放过滤掉 ${droppedAsJunk} 条）` + '\n')
 console.log(`今天可以看这几条（每词最多 ${PER} 条，共 ${N} 条）：`)
 const perKw = {}
 let shown = 0

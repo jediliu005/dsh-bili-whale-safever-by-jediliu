@@ -151,6 +151,20 @@ if (cmd === 'check') {
     console.log(`✓ 分享额度内（${usedShare}/${shareDaily}）${target ? `，target=${target}` : ''} —— 分享型不看白名单，但同一视频 7 天内只能一次`)
     process.exit(0)
   }
+  // 2026-11-28 主人定：评论每日条数上限（config.comment.dailyLimit，默认 1）
+  //   只管「自主评论」（自己挑的视频下发的顶层评论、不带 --share）；
+  //   回复主人属于主人授权，不走这个额度 ✓
+  if (typeof opt.type === 'string' && opt.type === 'comment' && auto) {
+    const cap = Number(config().comment?.dailyLimit ?? 1)
+    const usedComments = q.log.filter((x) => dayOf(x.at) === today() && x.type === 'comment' && x.auto && !x.share).length
+    if (Number.isFinite(cap) && cap >= 0 && usedComments >= cap) {
+      console.log(`✗ 今天自主评论已 ${usedComments}/${cap} 条（config.comment.dailyLimit）→ 这条不发`)
+      console.log('   放宽：设置页「评论」里改每日上限；今天就非发不可：先问主人')
+      process.exit(2)
+    }
+    console.log(`✓ 评论额度内（${usedComments}/${cap} · config.comment.dailyLimit）${target ? '· target=' + target : ''}`)
+    process.exit(0)
+  }
   // 语义（2026-10-14 定；**2026-10-18 简化**：删除「自主 2 条」这个独立额度 ✗ —— 主人定：基本没用 ✓）
   //   现在的缰绳只有这些：分享型 ≤shareDaily/天（上面那条分支 ✓）· 评分卡 · 同一视频 7 天一次 · 事后报备。
   //   **非分享**的自主发言**不再设每日条数额度** —— 但仍必须 dry→go→署名复核→报备主人 ✓

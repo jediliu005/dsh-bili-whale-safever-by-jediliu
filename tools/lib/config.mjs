@@ -1,4 +1,4 @@
-﻿// 统一配置层 —— 一个文件承载所有"属于使用者"的东西。
+// 统一配置层 —— 一个文件承载所有"属于使用者"的东西。
 //
 // 为什么要有它（2026-10-14 外部评审指出的最大架构缺口）：
 //   在此之前，"个人化的东西"散在四处、形态还不一样 ——
@@ -35,6 +35,9 @@ export const DEFAULTS = {
   },
   preferences: {
     maxAgeDays: 30,   // 只看近 N 天发布的（0 = 不限制）—— 2026-10-31 主人定
+    // 2026-11-28 主人定：最短看片时间（秒）。短于它的视频不进候选；
+    // 每条候选至少看够这么多秒的画面/字幕，再决定砍不砍（0 = 不限制）
+    minSeconds: 20,
     like: ['AI 工具与插件', '鬼畜与怀旧向剪辑', '猫咪', 'Live2D/模型'],
     dislike: ['带货', '擦边', '标题党', '纯搬运'],
   },
@@ -55,7 +58,15 @@ export const DEFAULTS = {
   //   \u60f3\u5f00\u5c31\u53bb\u8bbe\u7f6e\u9875\u6253\u5f00 \u2713 \u9ed8\u8ba4\u4e0d\u66ff\u4ed6\u4eec\u6253\u5f00 \u2717
   listen: { comment: false, commentIntervalSec: 60, scope: 'both', oncePerPerson: true, allDay: false, dm: true, dmIntervalSec: 60, live: false, liveRoom: '', liveScope: 'owner' },
   // 作息：windows[] = 每天允许醒来的时段（每个窗口 = 一次机会）；maxWakesPerDay 缺省 = 窗口数（硬上限 3）
-  night: { windows: [{ start: '20:00', end: '24:00', wakes: 1 }], skipChance: 0.3, minGapMin: 10, maxVideos: 5 },
+  night: { windows: [{ start: '20:00', end: '24:00', wakes: 1 }], skipChance: 0.3, minGapMin: 10, maxVideos: 5,
+    // 2026-11-28 主人定：单次醒来「最少喜爱视频数」。默认 0 = 不额外要求；
+    // 设成 N 后，本趟感兴趣的条数不足 N 时继续往下看，直到超过 N 或达到 maxVideos 为止
+    minLiked: 0 },
+  // 2026-11-28 主人定：评论区/回复的规矩（以前这三项只写在她自己的纪律里，没有配置项）
+  //   dailyLimit     每天最多发几条「自主评论」（不含回复主人、不含分享）
+  //   autoReplyOwner 主人评论要不要直接回（false = 先起草稿给主人看）
+  //   replyMode      回复「其他人」的方式：draft = 只起草稿等主人批；direct = 可以直接回
+  comment: { dailyLimit: 1, autoReplyOwner: true, replyMode: 'draft' },
 }
 
 const merge = (base, over) => {

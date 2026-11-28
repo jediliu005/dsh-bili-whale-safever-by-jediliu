@@ -166,6 +166,23 @@ if (SHARE) {
   }
 }
 
+// 2026-11-28 主人定：回复其他人的方式由 config.comment.replyMode 决定
+//   draft（默认）= 先写草稿等主人批；批过之后走这条命令要带 --approved
+//   direct        = 允许直接回
+//   主人自己不受这条限制 ✓
+if (parent && root && !args.has('approved')) {
+  const mode = String(config().comment?.replyMode ?? 'draft')
+  const ownMid = String(config().owner?.mid ?? '')
+  if (mode !== 'direct') {
+    const who = await parentAuthor(oid, root, parent, type)
+    if (who?.mid && String(who.mid) !== ownMid) {
+      console.log(`✗ 设置里「回复其他人」= 只起草稿（config.comment.replyMode=${mode}）`)
+      console.log('  先 `reply-draft add …` 起一份草稿推给主人；主人说「发」之后，再在命令后加 --approved 走这条 ✓')
+      process.exit(2)
+    }
+  }
+}
+
 // "同一个人只回一条"（可选 · 2026-10-17 加）：只在二级回复（--root + --parent）时生效。
 // 用在"只回直接回她的人"那条流程里 → 同一个人 30 天内不会被回第二次（防拉锯、防被当聊天机器人）。
 // 放在入口处（--dry 也会跑），这样"能不能回"在发之前就能知道。

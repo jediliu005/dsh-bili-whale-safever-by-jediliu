@@ -20,7 +20,8 @@
       "擦边",
       "标题党",
       "纯搬运"
-    ]
+    ],
+    "minSeconds": 20
   },
   "owner": {
     "mid": "",
@@ -71,7 +72,13 @@
     ],
     "skipChance": 0.3,
     "maxVideos": 5,
-    "maxWakesPerDay": 1
+    "maxWakesPerDay": 1,
+    "minLiked": 0
+  },
+  "comment": {
+    "dailyLimit": 1,
+    "autoReplyOwner": true,
+    "replyMode": "draft"
   },
   "notify": {
     "type": "none",
